@@ -1,4 +1,4 @@
-
+'''
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -200,4 +200,222 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+'''
+
+import sys
+import subprocess
+import pprint
+from optparse import OptionParser
+import json
+
+registerUrl="https://bio.tools/api"
+pp = pprint.PrettyPrinter(indent=4)
+
+def fatalError(msg):
+    sys.stderr.write("error:"+msg+"\n")
+    sys.exit
+    exit(0)	
+
+def main():
+
+ 	usage =""
+	usage += "\n-------------------\n"
+	usage +="\nregistryClient : \nregister, update or delete  ressources in the Elixir Service Registry (bio.tools) using the Rest API"
+	usage += "\n"
+	usage += "\npython registryClient.py -f JSONFILE-l LOGIN -p PASS [-r | -u | -d] [-q]"
+	usage += "\n"
+	usage += "\n"
+	usage += "\tdelete case : \n\t\tpython registryClient.py -d -l LOGIN -p PASS   -a AFFILIATION -n bioinfo_bioperl"
+	usage += "\n"
+	usage += "\tupdate case : \n\t\tpython registryClient.py -u -l LOGIN -p PASS  -f tool.json"
+	usage += "\n"
+	usage += "\tregister case : \n\t\tpython registryClient.py -u -l LOGIN -p PASS  -f tool.json"
+	usage += "\n"
+	usage += "\n-------------------\n"
+
+	parser = OptionParser(usage)
+ 
+	parser.add_option("-f", "--file", dest="jsonFile",
+                  help="tool description file" )
+	parser.add_option("-q", "--quiet",
+                  action="store_false", dest="verbose", default=True,
+                  help="don't print status messages to stdout")
+	parser.add_option("-r", "--register",
+                  action="store_true", dest="register", default=False,
+                  help="register a ressource  defined as json in a file (-f) ")
+	parser.add_option("-u", "--update",
+                  action="store_true", dest="update", default=False,
+                  help="delete a ressource  defined as json in a file (-f)")
+	parser.add_option("-d", "--delete",
+                  action="store_true", dest="delete", default=False,
+                  help="delete a ressource  defined as json in a file (-f)")
+	parser.add_option("-l", "--login", dest="username",
+                  help="account login" )
+	parser.add_option("-p", "--pass", dest="password",
+                  help="account password" )
+	parser.add_option("-a", "--affiliation", dest="affiliation",
+                  help="ressource affiliation (linked to ressource publisher account). Mandatory for delete action." )
+	parser.add_option("-n", "--name", dest="resname",
+                  help="ressource name. Mandatory for delete action when no file (-f) is provided." )
+
+
+	(options, args) = parser.parse_args()
+	if len(sys.argv[1:]) == 0:
+		 print("no argument given!")
+		 parser.print_help()
+		 exit()
+	countActionFlag=0
+	if options.register==True:
+		countActionFlag+=1
+	if options.update==True:
+		countActionFlag+=1
+	if options.delete==True:
+		countActionFlag+=1
+	if countActionFlag>1:
+                msg= "  register %s \n" % options.register
+		msg+=  "  delete %s \n" % options.delete
+		msg+=  "  update %s \n" % options.update
+		fatalError("to much actions (%s): \n%s\n" %(countActionFlag,msg))
+
+	if options.delete==True:
+		if options.affiliation==None:
+			fatalError("affiliation (-a) is needed for delete action")
+		if options.jsonFile==None and  options.resname==None :
+	       		 fatalError("-f or -n needed for delete action")
+
+	else:
+		if options.jsonFile==None  :
+	       		 fatalError("-f is mandatory for register or update action")
+
+
+
+
+	option_dict = vars(options)
+
+	class obj(object):
+   		 def __init__(self, d):
+        		for a, b in list(d.items()):
+          			  if isinstance(b, (list, tuple)):
+            				   setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
+          			  else:
+          				     setattr(self, a, obj(b) if isinstance(b, dict) else b)
+
+
+	act="undef"
+	if  options.register==True:
+			act="register"
+	if  options.update==True:
+			act="update"
+	if  options.delete==True:
+			act="delete"
+	option_dict['act']=act
+	opt=obj(option_dict)
+	return opt
+
+
+
+def execCmd(cmd):
+	if options.verbose:
+		print("command line :")
+		print(cmd)
+	retStr=""
+	p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+ 	for line in p.stdout.readlines():
+		retStr+= str(line)
+	retval = p.wait()
+	if retval!=0:
+		fatalError("command line return status code "+str(retval))
+	return retStr
+
+def execLoginCmd(username, password):
+	cmd = "curl -s -H \"Content-type: application/json\" -X POST -d '{\"username\":\""+username+"\",\"password\":\""+password+"\"}' "
+	cmd+=registerUrl+"/auth/login"
+	return execCmd(cmd)
+
+
+def execRegisterOrUpdateCmd(token, jsonFile):
+	cmd = "curl -s  "
+	cmd+="\"Accept: application/json\" -H 'Authorization: Token "+token+"' "
+	cmd+=" -X POST  --data '@"+jsonFile+"'  "+registerUrl+"/tool"
+	return execCmd(cmd)
+
+
+def execDeleteCmd(token, affiliation, name):
+	cmd = "curl -s  "
+	cmd+=" -H 'Authorization: Token "+token+"' "
+	cmd+=" -X DELETE   "+registerUrl+"/tool"+"/"+affiliation+"/"+name
+	return execCmd(cmd)
+
+
+ 
+
+if __name__ == "__main__":
+	options=main()
+
+	 
+	ressource={}
+	if options.act=="delete" and options.resname!=None:
+		ressource['name']=options.resname	
+	else:
+		descFile = open(options.jsonFile, "r")
+		desc=descFile.read()
+		descFile.close()
+		
+
+		if desc==None or len(desc)<1:
+			fatalError("descriptor file %s not usable "% ( options.jsonFile) ); 
+		else:
+			ressource=json.loads(desc)
+			if 'name' in list(ressource.keys()):		
+				if options.verbose:
+					print("going to manage ressource with name ***%s***" %(ressource['name']))
+			else:
+				fatalError("no attribute name in json object (file %s )"% ( options.jsonFile) ); 
+
+
+	if options.verbose:
+	        print("ressource descriptor  file %s : " % options.jsonFile)
+	        print("ressource name %s : " %(ressource['name']))
+                print("action : %s " % options.act)
+		
+	#print desc
+
+	jsonResp=execLoginCmd(options.username, options.password)
+	#print jsonResp
+
+	resp=json.loads(jsonResp)
+
+	if 'token' in list(resp.keys()):
+		token=resp['token']
+		
+		if options.verbose:
+			print("authentication done, token : "+token)
+
+		if options.register==True or options.update==True:
+			jsonResp=execRegisterOrUpdateCmd(token, options.jsonFile)
+			if options.verbose:
+				print("%s done using file %s " %(options.act, options.jsonFile))
+		else:
+			if options.delete==True:
+				jsonResp=execDeleteCmd(token, options.affiliation, ressource['name'])
+				if options.verbose:
+					print("%s done (%s/%s) " %(options.act,options.affiliation,ressource['name']))
+	else:
+		fatalError("error during login :\n "+jsonResp) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
