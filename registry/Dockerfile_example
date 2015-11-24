@@ -1,0 +1,25 @@
+LABEL  name="Emboss"
+LABEL  homepage="http://emboss.sourceforge.net/"
+LABEL  resourceType="Tool"
+LABEL  interfaceType="Command line"
+LABEL  description="The European Molecular Biology Open Software Suite"
+#EDAM Topic
+LABEL  topic="Data processing and validation"
+#EDAM operation
+LABEL  functionName="Sequence processing"
+LABEL  contactEmail="adamsmithkwez@cnrs.fr"
+FROM biodckr/biodocker:latest
+USER root
+# Install EMBOSS package
+RUN apt-get update && \
+    apt-get install -y \
+      emboss=6.6.0-1 && \
+    apt-get clean && \
+    apt-get purge && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+USER biodocker
+WORKDIR /data
+CMD ["embossdata"]
+# File Author / Maintainer
+MAINTAINER Adam Smith <adamsmithkwez@cnrs.fr>

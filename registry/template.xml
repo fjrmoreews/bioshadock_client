@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xsi:schemaLocation=
+	"http://bio.tools biotools-1.4.xsd">
+ <resource>
+  <name>$name</name>
+  <homepage>$homepage</homepage>
+  <resourceType>$resourceType</resourceType>
+  <interface>
+   <interfaceType>$interfaceType</interfaceType>
+   </interface>
+  <description>
+   $description
+  </description>
+  <!-- EDAM Topic-->
+  <topic>$topic</topic> 
+  <function>
+   <functionName>
+   $functionName
+   </functionName>
+   </function>
+   <contact>
+   <contactEmail>
+    $contactEmail
+   </contactEmail>
+  </contact>
+ </resource>
+</resources>
