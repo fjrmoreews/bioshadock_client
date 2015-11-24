@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xsi:schemaLocation=
+	"http://bio.tools biotools-1.4.xsd">
+ <resource>
+  <name>bioperlref</name>
+  <homepage>http://resourcename.org</homepage>
+  <resourceType>Tool</resourceType>
+  <interface>
+   <interfaceType>Command line</interfaceType>
+   </interface>
+  <description>
+   bioperl libraries
+  </description>
+  <!-- EDAM Topic-->
+  <topic>Bioinformatics</topic> 
+  <function>
+   <functionName>
+   Sequence processing
+   </functionName>
+   </function>
+   <contact>
+   <contactEmail>
+   fmoreews@irisa.fr
+   </contactEmail>
+  </contact>
+ </resource>
+</resources>
