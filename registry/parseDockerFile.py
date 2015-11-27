@@ -206,7 +206,9 @@ from string import Template
 import sys
 import re
 import pprint
-from optparse import OptionParser
+from optparse import OptionParser 
+from xml.sax.saxutils import escape
+
 pp = pprint.PrettyPrinter(indent=4)
 
 def fatalError(msg):
@@ -220,7 +222,7 @@ def main():
 	usage += "\n-------------------\n"
 	usage +="\nregistryClient : \ngenerate a ressource descriptor file from a DockerFile for the Elixir Service Registry (bio.tools)"
 	usage += "\n"
-	usage += "\npython2.7 parseDockerFile.py -f DOCKERFILE -t TEMPLATEFILE"
+	usage += "\npython2.7 parseDockerFile.py -d DOCKERFILE -t TEMPLATEFILE"
 	usage += "\n-------------------\n"
 
 	parser = OptionParser(usage)
@@ -250,6 +252,7 @@ def main():
 
 
 
+
 if __name__ == "__main__":
 	options=main()
 	
@@ -262,7 +265,7 @@ if __name__ == "__main__":
 		#print(line)	
 		lb=line.split("LABEL")
 		
-		if len(lb)>1:
+		if line.strip().startswith("LABEL") and len(lb)>1:
 			
 			tupl=lb[1].strip().split("=")
 			if len(tupl)>1:
@@ -274,7 +277,19 @@ if __name__ == "__main__":
 				if mdval.endswith('"'):
         				mdval = mdval[:-1]		
 				#print("!"+mdkey+"="+mdval)
-				mdata[mdkey]=mdval
+				mdata[mdkey]=escape(mdval)
+		lb=line.split("MAINTAINER")
+		if line.strip().startswith("MAINTAINER") and len(lb)>1:
+			 p = re.compile('[^<>]*<([^<>]*)')
+			 m = p.match(line.strip())
+			 pp.pprint(m)
+			
+			 if m != None and len(m.group())>1: 
+			 	mdval=m.group(1).strip()
+				mdkey="contactEmail"
+				#print("!"+mdkey+"="+mdval)
+				mdata[mdkey]=escape(mdval)
+
 	#pp.pprint(mdata)
 	tFile = open(options.templFile, "r")
 	templ=tFile.read()
