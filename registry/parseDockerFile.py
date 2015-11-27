@@ -282,7 +282,7 @@ if __name__ == "__main__":
 		if line.strip().startswith("MAINTAINER") and len(lb)>1:
 			 p = re.compile('[^<>]*<([^<>]*)')
 			 m = p.match(line.strip())
-			 pp.pprint(m)
+			 #pp.pprint(m)
 			
 			 if m != None and len(m.group())>1: 
 			 	mdval=m.group(1).strip()
