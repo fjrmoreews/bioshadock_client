@@ -204,300 +204,180 @@
 
 import sys
 import subprocess
-#from pprint import pprint
 import pprint
 from optparse import OptionParser
 import json
-#from xml.etree import cElementTree as ElementT
 from lxml import etree as ElementTree
+
+from bioshadock_biotools.biotools import BioTools
 
 from collections import defaultdict
 registerUrl="https://bio.tools/api"
 pp = pprint.PrettyPrinter(indent=4)
 
 
-
-
-
- 
- 
-
-
-
 def fatalError(msg):
     sys.stderr.write("error:"+msg+"\n")
     sys.exit
-    exit(0)	
+    exit(0)
 
 def main():
 
- 	usage =""
-	usage += "\n-------------------\n"
-	usage +="\nregistryClient : \nregister, update or delete  ressources in the Elixir Service Registry (bio.tools) using the Rest API"
-	usage += "\n"
-	usage += "\npython2.7 registryClient.py -f RES_FILE-l LOGIN -p PASS [-r | -u | -d] [-q]"
-	usage += "\n"
-	usage += "\n"
-	usage += "\tdelete case : \n\t\tpython2.7 registryClient.py -d -l LOGIN -p PASS   -a AFFILIATION -n RESSOURCE_NAME"
-	usage += "\n"
-	usage += "\tupdate case : \n\t\tpython2.7 registryClient.py -r -l LOGIN -p PASS  -f tool.json"
-	usage += "\n"
-	usage += "\tregister case : \n\t\tpython2.7 registryClient.py -u -l LOGIN -p PASS  -f tool.json"
-	usage += "\n"
-	usage += "\tget case : \n\t\tpython2.7 registryClient.py -g -a AFFILIATION -n RESSOURCE_NAME"
-	usage += "\n"
-	usage += "\n-------------------\n"
+    usage =""
+    usage += "\n-------------------\n"
+    usage +="\nregistryClient : \nregister, update or delete  ressources in the Elixir Service Registry (bio.tools) using the Rest API"
+    usage += "\n"
+    usage += "\npython registryClient.py -f RES_FILE-l LOGIN -p PASS [-r | -u | -d] [-q]"
+    usage += "\n"
+    usage += "\n"
+    usage += "\tdelete case : \n\t\tpython registryClient.py -d -l LOGIN -p PASS   -a AFFILIATION -n RESSOURCE_NAME"
+    usage += "\n"
+    usage += "\tupdate case : \n\t\tpython registryClient.py -r -l LOGIN -p PASS  -f tool.json"
+    usage += "\n"
+    usage += "\tregister case : \n\t\tpython registryClient.py -u -l LOGIN -p PASS  -f tool.json"
+    usage += "\n"
+    usage += "\tget case : \n\t\tpython registryClient.py -g -a AFFILIATION -n RESSOURCE_NAME"
+    usage += "\n"
+    usage += "\n-------------------\n"
 
-	parser = OptionParser(usage)
- 
-	parser.add_option("-f", "--file", dest="resFile",
+    parser = OptionParser(usage)
+
+    parser.add_option("-f", "--file", dest="resFile",
                   help="tool description file" )
-	parser.add_option("-q", "--quiet",
+    parser.add_option("-q", "--quiet",
                   action="store_false", dest="verbose", default=True,
                   help="don't print status messages to stdout")
-	parser.add_option("-r", "--register",
+    parser.add_option("-r", "--register",
                   action="store_true", dest="register", default=False,
                   help="register a ressource  defined as json in a file (-f) ")
-	parser.add_option("-u", "--update",
+    parser.add_option("-u", "--update",
                   action="store_true", dest="update", default=False,
-                  help="delete a ressource  defined as json in a file (-f)")
-	parser.add_option("-g", "--get",
+                  help="update a ressource  defined as json in a file (-f)")
+    parser.add_option("-g", "--get",
                   action="store_true", dest="getres", default=False,
-                  help="delete a ressource  defined as json in a file (-f)")
-	parser.add_option("-d", "--delete",
+                  help="get a ressource  defined as json in a file (-f)")
+    parser.add_option("-d", "--delete",
                   action="store_true", dest="delete", default=False,
                   help="delete a ressource  defined as json in a file (-f)")
-	parser.add_option("-l", "--login", dest="username",
+    parser.add_option("-l", "--login", dest="username",
                   help="account login" )
-	parser.add_option("-p", "--pass", dest="password",
+    parser.add_option("-p", "--pass", dest="password",
                   help="account password" )
-	parser.add_option("-a", "--affiliation", dest="affiliation",
+    parser.add_option("-a", "--affiliation", dest="affiliation",
                   help="ressource affiliation (linked to ressource publisher account). Mandatory for delete action." )
-	parser.add_option("-n", "--name", dest="resname",
+    parser.add_option("-n", "--name", dest="resname",
                   help="ressource name. Mandatory for delete action when no file (-f) is provided." )
-	parser.add_option("-x", "--xml",
+    parser.add_option("-x", "--xml",
                   action="store_true", dest="xmlTransportFormat", default=False,
-		  help="xml ressource submission format (default json)" )
+                  help="xml ressource submission format (default json)" )
 
-	(options, args) = parser.parse_args()
-	if len(sys.argv[1:]) == 0:
-		 print("no argument given!")
-		 parser.print_help()
-		 exit()
-	countActionFlag=0
-	if options.register==True:
-		countActionFlag+=1
-	if options.update==True:
-		countActionFlag+=1
-	if options.delete==True:
-		countActionFlag+=1
-	if options.getres==True:
-		countActionFlag+=1
-	if countActionFlag>1:
-                msg= "  register %s \n" % options.register
-		msg+=  "  delete %s \n" % options.delete
-		msg+=  "  update %s \n" % options.update
-		msg+=  "  get %s \n" % options.getres
-		fatalError("to much actions (%s): \n%s\n" %(countActionFlag,msg))
+    (options, args) = parser.parse_args()
+    if len(sys.argv[1:]) == 0:
+        print("no argument given!")
+        parser.print_help()
+        exit()
+    countActionFlag=0
+    if options.register==True:
+        countActionFlag+=1
+    if options.update==True:
+        countActionFlag+=1
+    if options.delete==True:
+        countActionFlag+=1
+    if options.getres==True:
+        countActionFlag+=1
+    if countActionFlag>1:
+        msg= " register %s \n" % options.register
+        msg+= " delete %s \n" % options.delete
+        msg+= " update %s \n" % options.update
+        msg+= " get %s \n" % options.getres
+        fatalError("to much actions (%s): \n%s\n" %(countActionFlag,msg))
 
-	if options.delete==True:
-		if options.affiliation==None:
-			fatalError("affiliation (-a) is needed for delete action")
-		if options.resFile==None and  options.resname==None :
-	       		 fatalError("-f or -n needed for delete action")
-	elif options.getres==True:
-		if options.affiliation==None:
-			fatalError("affiliation (-a) is needed for get action")
+    if options.delete==True:
+        if options.affiliation==None:
+            fatalError("affiliation (-a) is needed for delete action")
+        if options.resFile==None and  options.resname==None :
+            fatalError("-f or -n needed for delete action")
+    elif options.getres==True:
+        if options.affiliation==None:
+            fatalError("affiliation (-a) is needed for get action")
+    else:
+        if options.resFile==None  :
+            fatalError("-f is mandatory for register or update action")
 
-	else:
-		if options.resFile==None  :
-	       		 fatalError("-f is mandatory for register or update action")
+    if not options.getres:
+        if not options.username or not options.password:
+            fatalError("Username and password required") 
 
+    option_dict = vars(options)
 
-
-
-	option_dict = vars(options)
-
-	class obj(object):
-   		 def __init__(self, d):
-        		for a, b in list(d.items()):
-          			  if isinstance(b, (list, tuple)):
-            				   setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
-          			  else:
-          				     setattr(self, a, obj(b) if isinstance(b, dict) else b)
-
-
-	act="undef"
-	if  options.register==True:
-			act="register"
-	if  options.update==True:
-			act="update"
-	if  options.delete==True:
-			act="delete"
-	if  options.getres==True:
-			act="get"
-	if  options.xmlTransportFormat==True:
-		transFormat="application/xml"
-	else:
-		transFormat="application/json"
-
-	option_dict['act']=act
-	option_dict['transportFormat']=transFormat
-	opt=obj(option_dict)
-	return opt
+    class obj(object):
+        def __init__(self, d):
+            for a, b in list(d.items()):
+                if isinstance(b, (list, tuple)):
+                    setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
+                else:
+                    setattr(self, a, obj(b) if isinstance(b, dict) else b)
 
 
+    act="undef"
+    if options.register == True:
+        act="register"
+    if  options.update == True:
+        act="update"
+    if options.delete == True:
+        act="delete"
+    if options.getres == True:
+        act="get"
+    if options.xmlTransportFormat == True:
+        transFormat="application/xml"
+    else:
+        transFormat="application/json"
 
-def execCmd(cmd):
-	if options.verbose:
-		print("command line :")
-		print(cmd)
-	retStr=""
-	p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
- 	for line in p.stdout.readlines():
-		retStr+= str(line)
-	retval = p.wait()
-	if retval!=0:
-		fatalError("command line return status code "+str(retval))
-	return retStr
+    option_dict['act']=act
+    option_dict['transportFormat']=transFormat
+    opt=obj(option_dict)
+    return opt
 
-def execLoginCmd(username, password):
-	cmd = "curl -s -H \"Content-type: application/json\" -X POST -d '{\"username\":\""+username+"\",\"password\":\""+password+"\"}' "
-	cmd+=registerUrl+"/auth/login"
-	return execCmd(cmd)
-
-
-def execRegisterOrUpdateCmd(token, resFile,transportFormat):
-	cmd = "curl -s  "
-	cmd+="\"Accept: "+transportFormat+"\" -H 'Authorization: Token "+token+"' "
-	cmd+=" -X POST  --data '@"+resFile+"'  "+registerUrl+"/tool"
-	return execCmd(cmd)
-
-
-def execDeleteCmd(token, affiliation, name):
-	cmd = "curl -s  "
-	cmd+=" -H 'Authorization: Token "+token+"' "
-	cmd+=" -X DELETE   "+registerUrl+"/tool"+"/"+affiliation+"/"+name
-	return execCmd(cmd)
-
-
-def execGetCmd(affiliation, name,transportFormat):
-	cmd = "curl -s  "
-	cmd+="\"Accept: "+transportFormat+"\" "
-	cmd+=" -X GET    "+registerUrl+"/tool"+"/"+affiliation+"/"+name
-	return execCmd(cmd)
-
-
-def treeToDict(t):
-    d = {t.tag: {} if t.attrib else None}
-    childr = list(t)
-    if childr:
-        dd = defaultdict(list)
-        for dc in map(treeToDict, childr):
-            for k, v in dc.iteritems():
-                dd[k].append(v)
-        d = {t.tag: {k:v[0] if len(v) == 1 else v for k, v in dd.iteritems()}}
-    if t.attrib:
-        d[t.tag].update(('@' + k, v) for k, v in t.attrib.iteritems())
-    if t.text:
-        text = t.text.strip()
-        if childr or t.attrib:
-            if text:
-              d[t.tag]['#text'] = text
-        else:
-            d[t.tag] = text
-    return d
-
- 
 
 if __name__ == "__main__":
-	options=main()
+    options=main()
 
-	 
-	ressource={}
-	if (options.act=="delete" or options.act=="get" )and options.resname!=None:
-		ressource['name']=options.resname	
-	else:
-		descFile = open(options.resFile, "r")
-		desc=descFile.read()
-		descFile.close()
-		
+    biotools = BioTools()
 
-		if desc==None or len(desc)<1:
-			fatalError("descriptor file %s not usable "% ( options.resFile) ); 
-		else:
-			
-			ressource= dict()
-			if options.xmlTransportFormat==True:
-				parser = ElementTree.XMLParser(recover=True)
-				tree = ElementTree.fromstring(desc, parser)
-				dtree=treeToDict(tree)			
-				ressource['name']=dtree['resources'][ 'resource']['name']
-			else:
-				ddict=json.loads(desc)
-				ressource['name']=ddict['name']
-				
-			if 'name' in list(ressource.keys()):		
-				if options.verbose:
-					print("going to manage ressource with name ***%s***" %(ressource['name']))
-			else:
-				fatalError("no attribute name in json object (file %s )"% ( options.resFile) ); 
+    ressource = biotools.get_resource(options)
+
+    if options.verbose:
+        print("Resource descriptor  file %s : " % options.resFile)
+        print("Resource name %s : " %(ressource['name']))
+        print("Action : %s " % options.act)
 
 
-	if options.verbose:
-	        print("ressource descriptor  file %s : " % options.resFile)
-	        print("ressource name %s : " %(ressource['name']))
-                print("action : %s " % options.act)
-		
-	#print desc
-	
-	if options.getres==True:
-		jsonResp=execGetCmd(options.affiliation, ressource['name'],options.transportFormat)
-		print jsonResp
-		if options.verbose:
-			print("%s done (%s/%s) " %(options.act,options.affiliation,ressource['name']))
-	else:
-		jsonResp=execLoginCmd(options.username, options.password)
-		#print jsonResp
-		resp=json.loads(jsonResp)
+    try:
+        if options.getres == True:
+            jsonResp=biotools.execGetCmd(options.affiliation, ressource['name'],options.transportFormat)
+            print json.dumps(jsonResp)
+            if options.verbose:
+                print("%s done (%s/%s) " %(options.act,options.affiliation,ressource['name']))
+        else:
+            jsonResp=biotools.execLoginCmd(options.username, options.password)
+            resp=jsonResp
+            if 'token' in list(resp.keys()):
+                token=resp['token']
 
+                if options.verbose:
+                    print("Authentication done, token : "+token)
 
-	
+                if options.register==True or options.update==True:
+                    jsonResp=biotools.execRegisterOrUpdateCmd(token, options.resFile,options.transportFormat)
+                    if options.verbose:
+                        print("%s done using file %s " %(options.act, options.resFile))
+                else:
+                    if options.delete==True:
+                        jsonResp=biotools.execDeleteCmd(token, options.affiliation, ressource['name'])
+                        if options.verbose:
+                            print("%s done (%s/%s) " %(options.act,options.affiliation,ressource['name']))
+            else:
+                fatalError("error during login :\n "+json.dumps(jsonResp))
 
-
-
-
-		if 'token' in list(resp.keys()):
-			token=resp['token']
-		
-			if options.verbose:
-				print("authentication done, token : "+token)
-
-			if options.register==True or options.update==True:
-				jsonResp=execRegisterOrUpdateCmd(token, options.resFile,options.transportFormat)
-				if options.verbose:
-					print("%s done using file %s " %(options.act, options.resFile))
-			else:
-				if options.delete==True:
-					jsonResp=execDeleteCmd(token, options.affiliation, ressource['name'])
-					if options.verbose:
-						print("%s done (%s/%s) " %(options.act,options.affiliation,ressource['name']))
-		else:
-			fatalError("error during login :\n "+jsonResp) 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    except Exception as e:
+        fatalError("Error during operation: "+ str(e))

@@ -206,102 +206,63 @@ from string import Template
 import sys
 import re
 import pprint
-from optparse import OptionParser 
+from optparse import OptionParser
 from xml.sax.saxutils import escape
+import logging
+
+from bioshadock_biotools.parser import Parser
 
 pp = pprint.PrettyPrinter(indent=4)
 
 def fatalError(msg):
     sys.stderr.write("error:"+msg+"\n")
     sys.exit
-    exit(0)	
+    exit(0)
 
 def main():
 
- 	usage =""
-	usage += "\n-------------------\n"
-	usage +="\nregistryClient : \ngenerate a ressource descriptor file from a DockerFile for the Elixir Service Registry (bio.tools)"
-	usage += "\n"
-	usage += "\npython2.7 parseDockerFile.py -d DOCKERFILE -t TEMPLATEFILE"
-	usage += "\n-------------------\n"
+    usage = ""
+    usage += "\n-------------------\n"
+    usage +="\nregistryClient : \ngenerate a ressource descriptor file from a DockerFile for the Elixir Service Registry (bio.tools)"
+    usage += "\n"
+    usage += "\npython parseDockerFile.py -d DOCKERFILE -t TEMPLATEFILE"
+    usage += "\n-------------------\n"
 
-	parser = OptionParser(usage)
- 
-	parser.add_option("-d", "--dockerfile", dest="dockFile",
+    parser = OptionParser(usage)
+
+    parser.add_option("-d", "--dockerfile", dest="dockFile",
                   help="DockerFile with meta-data in LABEL instructions" )
-	parser.add_option("-t", "--template", dest="templFile",
+    parser.add_option("-t", "--template", dest="templFile",
                   help="xml or json template file ($ for variables)" )
-	(options, args) = parser.parse_args()
-	if len(sys.argv[1:]) == 0:
-		 print("no argument given!")
-		 parser.print_help()
-		 exit()
-	if options.dockFile==None or  options.templFile==None :
-	       	fatalError("-d and -t options needed ")
-	option_dict = vars(options)
+    parser.add_option("-o", "--output", dest="outFile",
+                  help="output file" )
 
-	class obj(object):
-   		 def __init__(self, d):
-        		for a, b in list(d.items()):
-          			  if isinstance(b, (list, tuple)):
-            				   setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
-          			  else:
-          				     setattr(self, a, obj(b) if isinstance(b, dict) else b)
-	opt=obj(option_dict)
-	return opt
+    (options, args) = parser.parse_args()
+    if len(sys.argv[1:]) == 0:
+        print("no argument given!")
+        parser.print_help()
+        exit()
+    if options.dockFile==None or  options.templFile==None :
+        fatalError("-d and -t options needed ")
+    option_dict = vars(options)
+
+    class obj(object):
+        def __init__(self, d):
+            for a, b in list(d.items()):
+                if isinstance(b, (list, tuple)):
+                    setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
+                else:
+                    setattr(self, a, obj(b) if isinstance(b, dict) else b)
+    opt=obj(option_dict)
+    return opt
 
 
 
 
 if __name__ == "__main__":
-	options=main()
-	
-	dFile = open(options.dockFile, "r")
-	dockf=dFile.read()
-	dFile.close()
-	lines=dockf.split("\n")
-	mdata= dict()
-    	for line in lines:
-		#print(line)	
-		lb=line.split("LABEL")
-		
-		if line.strip().startswith("LABEL") and len(lb)>1:
-			
-			tupl=lb[1].strip().split("=")
-			if len(tupl)>1:
-				mdkey=tupl[0].strip()
-				mdval=tupl[1].strip()	
-
-				if mdval.startswith('"'):
-					mdval = mdval[1:]
-				if mdval.endswith('"'):
-        				mdval = mdval[:-1]		
-				#print("!"+mdkey+"="+mdval)
-				mdata[mdkey]=escape(mdval)
-		lb=line.split("MAINTAINER")
-		if line.strip().startswith("MAINTAINER") and len(lb)>1:
-			 p = re.compile('[^<>]*<([^<>]*)')
-			 m = p.match(line.strip())
-			 #pp.pprint(m)
-			
-			 if m != None and len(m.group())>1: 
-			 	mdval=m.group(1).strip()
-				mdkey="contactEmail"
-				#print("!"+mdkey+"="+mdval)
-				mdata[mdkey]=escape(mdval)
-
-	#pp.pprint(mdata)
-	tFile = open(options.templFile, "r")
-	templ=tFile.read()
-	tFile.close()
-	
-	desc = Template(templ).safe_substitute(mdata)
- 
-	#print "-----------------\n"
-	print desc
-
-
-
-
-
-
+    options=main()
+    parser = Parser(options.dockFile)
+    if options.outFile is not None:
+        parser.parse(options.templFile, options.outFile)
+    else:
+        parser.parse(options.templFile)
