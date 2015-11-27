@@ -4,6 +4,7 @@ import logging
 import sys
 import json
 from lxml import etree as ElementTree
+from collections import defaultdict
 
 requests.packages.urllib3.disable_warnings()
 
@@ -76,18 +77,23 @@ class BioTools(object):
         r = requests.post(self.registerUrl+"/auth/login", verify=False, data={'username': username, 'password': password})
         status = r.status_code
         if status != 200:
-            raise Exception('Login failure: '+r.json())
+            raise Exception('Login failure: '+str(status))
         return r.json()
 
     def execRegisterOrUpdateCmd(self, token, resFile, transportFormat):
         headers = {'Authorization': 'Token '+str(token), 'Accept': transportFormat}
-        regfile = {'file': (resFile, open(resFile, 'rb'), 'application/xml', {'Expires': '0'})}
+        regFile = {'file': (resFile, open(resFile, 'rb'), 'application/xml', {'Expires': '0'})}
         r = requests.post(self.registerUrl+"/tool", headers=headers, verify=False,
                           files=regFile)
         status = r.status_code
         if status != 200:
-            raise Exception('RegisterOrUpdate failure: '+r.json())
-        return r.json()
+            raise Exception('RegisterOrUpdate failure: '+str(status))
+        res = {}
+        try:
+            res = r.json()
+        except Exception as e:
+            logging.debug(str(e))
+        return res
 
     def execDeleteCmd(self, token, affiliation, name):
         headers = {'Authorization': 'Token '+str(token)}
@@ -95,8 +101,13 @@ class BioTools(object):
                             verify=False, headers=headers)
         status = r.status_code
         if status != 200:
-            raise Exception('RegisterOrUpdate failure: '+r.json())
-        return r.json()
+            raise Exception('RegisterOrUpdate failure: '+str(status))
+        res = {}
+        try:
+            res = r.json()
+        except Exception as e:
+            logging.debug(str(e))
+        return res
 
     def execGetCmd(self, affiliation, name,transportFormat):
         headers = {'Accept': transportFormat}
@@ -104,5 +115,5 @@ class BioTools(object):
                          verify=False, headers=headers)
         status = r.status_code
         if status != 200:
-            raise Exception('RegisterOrUpdate failure: '+r.json())
+            raise Exception('RegisterOrUpdate failure: '+str(status))
         return r.json()
