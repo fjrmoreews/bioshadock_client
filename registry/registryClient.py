@@ -347,8 +347,8 @@ if __name__ == "__main__":
     ressource = biotools.get_resource(options)
 
     if options.verbose:
-        print("Resource descriptor  file %s : " % options.resFile)
-        print("Resource name %s : " %(ressource['name']))
+        print("Resource descriptor file: %s" % options.resFile)
+        print("Resource name: %s" %(ressource['name']))
         print("Action : %s " % options.act)
 
 
