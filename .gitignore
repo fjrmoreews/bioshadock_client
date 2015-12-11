@@ -1,2 +1,3 @@
 registry/bioshadock_biotools.egg-info
 **/*.pyc
+registry/dist
